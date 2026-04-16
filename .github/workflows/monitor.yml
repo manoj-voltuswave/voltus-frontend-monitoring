@@ -14,7 +14,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Hard cap: ~45s setup (checkout + node + npm ci + playwright cache) plus
+    # up to 2 × 2-min monitoring attempts = ~4m45s. 6 min gives a small buffer.
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
 
@@ -41,8 +43,15 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run monitoring checks
+        # 2-min timeout per attempt, retry once on timeout or non-zero exit.
+        # A stuck run is killed and re-tried so we don't eat into the next
+        # scheduled 5-min cycle.
+        uses: nick-fields/retry@v3
         env:
           HEARTBEAT_DEV_URL: ${{ secrets.HEARTBEAT_DEV_URL }}
           HEARTBEAT_QA_URL: ${{ secrets.HEARTBEAT_QA_URL }}
           HEARTBEAT_PREPROD_URL: ${{ secrets.HEARTBEAT_PREPROD_URL }}
-        run: npx tsx src/monitor/run.ts
+        with:
+          timeout_minutes: 2
+          max_attempts: 2
+          command: npx tsx src/monitor/run.ts
