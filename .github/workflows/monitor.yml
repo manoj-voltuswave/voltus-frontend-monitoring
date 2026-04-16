@@ -1,0 +1,35 @@
+name: Frontend Monitoring (dev / qa / pre-prod)
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run monitoring checks
+        env:
+          HEARTBEAT_DEV_URL: ${{ secrets.HEARTBEAT_DEV_URL }}
+          HEARTBEAT_QA_URL: ${{ secrets.HEARTBEAT_QA_URL }}
+          HEARTBEAT_PREPROD_URL: ${{ secrets.HEARTBEAT_PREPROD_URL }}
+        run: npx tsx src/monitor/run.ts

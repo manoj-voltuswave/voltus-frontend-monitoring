@@ -13,6 +13,8 @@
     "@types/node": "^25.6.0",
     "checkly": "^7.11.0",
     "jiti": "^2.6.1",
+    "playwright": "^1.59.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
 }
