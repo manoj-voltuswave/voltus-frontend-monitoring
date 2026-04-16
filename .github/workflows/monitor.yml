@@ -1,11 +1,10 @@
 name: Frontend Monitoring (dev / qa / pre-prod)
 
 on:
-  schedule:
-    # Offset from top-of-5-minute slots — GitHub Actions cron is deprioritised
-    # at these high-load ticks. Running at xx:03, xx:08, xx:13, ... lowers
-    # the chance of scheduling delay on free public runners.
-    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
+  # Scheduling is driven by cron-job.org (job id 7492124), which POSTs
+  # workflow_dispatch to this repo every 5 min. GitHub Actions' own cron
+  # is unreliable on free tier — it was dropping scheduled runs for 40+
+  # minutes, tripping the Checkly heartbeats with false alerts.
   workflow_dispatch:
 
 concurrency:
