@@ -14,7 +14,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +26,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        # ubuntu-latest already ships every library Playwright needs, so we skip
+        # --with-deps (which installs ~21 MB of font packages via apt and pushes
+        # the step past a 5-min timeout). Cache above makes this step a no-op
+        # after the first run per package-lock.json.
+        run: npx playwright install chromium
 
       - name: Run monitoring checks
         env:
