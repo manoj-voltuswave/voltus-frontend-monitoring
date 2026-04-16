@@ -64,6 +64,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
+  // Unexpected fatal error (Playwright crash, syntax error, etc.) — exit 1
+  // so GitHub Actions marks the job as failed and the retry job fires.
+  // Routine env-check failures are already handled inside main() and keep
+  // the exit code 0; heartbeats (not exit codes) drive alerting for those.
   console.error('Unexpected fatal error:', err)
-  process.exit(0)
+  process.exit(1)
 })

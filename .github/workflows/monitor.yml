@@ -13,10 +13,11 @@ concurrency:
 
 jobs:
   check:
+    name: Check (attempt 1)
     runs-on: ubuntu-latest
-    # Hard cap: ~45s setup (checkout + node + npm ci + playwright cache) plus
-    # up to 2 × 2-min monitoring attempts = ~4m45s. 6 min gives a small buffer.
-    timeout-minutes: 6
+    # 2-min hard cap per attempt. If we blow past this (stuck Playwright,
+    # cold cache + slow network, etc.), the job fails and retry-check fires.
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
 
@@ -30,28 +31,49 @@ jobs:
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
-        id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
 
       - name: Install Playwright Chromium
-        # ubuntu-latest already ships every library Playwright needs, so we skip
-        # --with-deps (which installs ~21 MB of font packages via apt and pushes
-        # the step past a 5-min timeout). Cache above makes this step a no-op
-        # after the first run per package-lock.json.
         run: npx playwright install chromium
 
       - name: Run monitoring checks
-        # 2-min timeout per attempt, retry once on timeout or non-zero exit.
-        # A stuck run is killed and re-tried so we don't eat into the next
-        # scheduled 5-min cycle.
-        uses: nick-fields/retry@v3
         env:
           HEARTBEAT_DEV_URL: ${{ secrets.HEARTBEAT_DEV_URL }}
           HEARTBEAT_QA_URL: ${{ secrets.HEARTBEAT_QA_URL }}
           HEARTBEAT_PREPROD_URL: ${{ secrets.HEARTBEAT_PREPROD_URL }}
+        run: npx tsx src/monitor/run.ts
+
+  retry-check:
+    name: Check (retry, runs only if attempt 1 failed)
+    needs: check
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          timeout_minutes: 2
-          max_attempts: 2
-          command: npx tsx src/monitor/run.ts
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Run monitoring checks
+        env:
+          HEARTBEAT_DEV_URL: ${{ secrets.HEARTBEAT_DEV_URL }}
+          HEARTBEAT_QA_URL: ${{ secrets.HEARTBEAT_QA_URL }}
+          HEARTBEAT_PREPROD_URL: ${{ secrets.HEARTBEAT_PREPROD_URL }}
+        run: npx tsx src/monitor/run.ts
