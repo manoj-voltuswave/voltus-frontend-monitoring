@@ -3,7 +3,7 @@
 Synthetic monitoring for the Voltuswave frontend across dev / qa / pre-prod / prod.
 
 - **prod** → monitored by Checkly (hosted Playwright runners, every 5 min).
-- **dev / qa / pre-prod** → monitored by this repo's GitHub Actions workflow (`.github/workflows/monitor.yml`, every 5 min); on success each env pings its UptimeRobot heartbeat, which UptimeRobot emails on silence.
+- **dev / qa / pre-prod** → monitored by this repo's GitHub Actions workflow (`.github/workflows/monitor.yml`, every 5 min); on success each env pings its Checkly heartbeat monitor, which Checkly emails on silence past its grace window.
 
 On any failure the alert emails go to `ambatimanojwork@gmail.com`, `a.manoj@voltuswave.com`, and `Vinod.p@voltuswave.com`.
 
@@ -21,7 +21,7 @@ Generic console errors are intentionally not asserted — they are noisy in lowe
 - `HEARTBEAT_QA_URL`
 - `HEARTBEAT_PREPROD_URL`
 
-Each is an UptimeRobot heartbeat monitor URL. The workflow pings the corresponding URL on success; on failure, UptimeRobot trips after its grace window and emails the alert recipients.
+Each is a Checkly heartbeat monitor URL (shape: `https://ping.checklyhq.com/<uuid>`). The workflow POSTs to the corresponding URL on success; on failure, Checkly trips after its grace window (10 min) and emails the alert recipients.
 
 ## Local commands
 

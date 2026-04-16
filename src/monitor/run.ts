@@ -20,7 +20,7 @@ async function pingHeartbeat(env: Env): Promise<void> {
     return
   }
   try {
-    const res = await fetch(url, { method: 'GET' })
+    const res = await fetch(url, { method: 'POST' })
     console.log(`✔ ${env.name}: heartbeat ping → HTTP ${res.status}`)
   } catch (err) {
     console.error(`✖ ${env.name}: heartbeat ping failed —`, err)
